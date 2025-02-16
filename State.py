@@ -1,84 +1,91 @@
-from abc import ABC, abstractmethod
+from abc import ABC
+from typing import List
 
 
-class State(ABC):
-    @abstractmethod
-    def green(self, traffic_lights):
-        pass
+class Section:
+    def __init__(self, color: str):
+        self.color = color
+        self.enabled = False
 
-    @abstractmethod
-    def yellow(self, traffic_lights):
-        pass
+    def set_enabled(self, value: bool):
+        self.enabled = value
 
-    @abstractmethod
-    def red(self, traffic_lights):
-        pass
+    def __str__(self):
+        return self.color if self.enabled else ' '
 
-class Green_light(State):
-    def green(self, traffic_lights):
-        print("GREEN")
-
-    def yellow(self, traffic_lights):
-        print("YELLOW")
-        traffic_lights.set_state(Yellow_light())
-
-    def red(self, traffic_lights):
-        print("RED")
-        traffic_lights.set_state(Red_light())
-
-
-class Yellow_light(State):
-    def green(self, traffic_lights):
-        print("GREEN")
-        traffic_lights.set_state(Green_light())
-
-    def yellow(self, traffic_lights):
-        print("YELLOW")
-
-    def red(self, traffic_lights):
-        print("RED")
-        traffic_lights.set_state(Red_light())
-
-class Red_light(State):
-    def green(self, traffic_lights):
-        print("GREEN")
-        traffic_lights.set_state(Green_light())
-
-    def yellow(self, traffic_lights):
-        print("YELLOW")
-        traffic_lights.set_state(Yellow_light())
-
-    def red(self, traffic_lights):
-        print("RED")
-
-class Light:
+class BaseState(ABC):
     def __init__(self):
-        self.state = Green_light()
+        self.data = [0, 0, 0]
 
-    def set_state(self, state):
-        self.state = state
+    def set_lamps(self, lamps: List[Section]) -> None:
+        for i in range(len(self.data)):
+            lamps[i].set_enabled(bool(self.data[i]))
 
-    def green(self):
-        self.state.green(self)
+class RedState(BaseState):
+    def __init__(self):
+        super().__init__()
+        self.data[0] = 1
 
-    def yellow(self):
-        self.state.yellow(self)
+class YellowState(BaseState):
+    def __init__(self):
+        super().__init__()
+        self.data[1] = 1
 
-    def red(self):
-        self.state.red(self)
+class GreenState(BaseState):
+    def __init__(self):
+        super().__init__()
+        self.data[2] = 1
+
+class StateChanger:
+    def __init__(self):
+        self.states = [
+            (0, GreenState),
+            (3, YellowState),
+            (4, RedState)
+        ]
+        self.loop_time = 6
+
+    def __get_lower_or_equal(self, index: int):
+        data = sorted(self.states, key=lambda  x: x[0])
+        i = 0
+        while i < len(data) and data[i][0] <= index:
+            i += 1
+        return data[i - 1][1]
+
+    def get_state_by_time(self, time: int) -> BaseState:
+        index = time % self.loop_time
+        return self.__get_lower_or_equal(index)()
+
+
+class TrafficLight:
+    def __init__(self):
+        self.sections = [
+            Section('RED'),
+            Section('YELLOW'),
+            Section('GREEN'),
+        ]
+        self.state = None
+        self.time = 0
+        self.state = StateChanger().get_state_by_time(self.time)
+        self.state.set_lamps(self.sections)
+
+    def add_time(self, time):
+        self.time += time
+        self.state = StateChanger().get_state_by_time(self.time)
+        self.state.set_lamps(self.sections)
+
+    def __str__(self):
+        return ','.join(
+            str(section) for section in self.sections if section.enabled
+        )
+
 
 def main():
-    flashlight = Light()
-    minutes = int(input()) % 6
-    color_mapping = {
-        0: flashlight.green,
-        1: flashlight.green,
-        2: flashlight.green,
-        3: flashlight.yellow,
-        4: flashlight.red,
-        5: flashlight.red
-    }
-    color_mapping[minutes]()
+    time = int(input())
+    traffic_light = TrafficLight()
+    traffic_light.add_time(time)
+    print(traffic_light)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
+
